@@ -1,10 +1,15 @@
 package videoeditor.compressor.video.features.compress
 
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import androidx.core.os.bundleOf
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.devs.adloader.AdProvider.loadBannerAd
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 import devs.core.AbstractAdapter
 import devs.core.BaseObservableFragment
 import devs.core.utils.load
@@ -12,6 +17,9 @@ import videoeditor.compressor.video.R
 import videoeditor.compressor.video.databinding.FragmentCompressOptionsBinding
 import videoeditor.compressor.video.databinding.ItemCompressOptionBinding
 import videoeditor.compressor.video.databinding.LayoutThumbImageBinding
+import videoeditor.compressor.video.features.compress.custom.CustomResQualityFragment
+import videoeditor.compressor.video.features.compress.resolution.ConfigurationUpdateLister
+import videoeditor.compressor.video.features.compress.resolution.ResolutionSelectionFragment
 
 interface CompressScreenCallbacks {
     fun startProcessing()
@@ -20,7 +28,7 @@ interface CompressScreenCallbacks {
 class CompressOptionsFragment :
     BaseObservableFragment<FragmentCompressOptionsBinding, CompressScreenCallbacks>(
         FragmentCompressOptionsBinding::inflate
-    ) {
+    ), ConfigurationUpdateLister {
     companion object {
         fun newInstance(uri: String): CompressOptionsFragment {
             val fragment = CompressOptionsFragment()
@@ -30,28 +38,21 @@ class CompressOptionsFragment :
     }
 
     private val viewModel by viewModels<CompressOptionViewModel>()
-    private val adapter: AbstractAdapter<CompressProfileModel, ItemCompressOptionBinding> by lazy {
-        object :
-            AbstractAdapter<CompressProfileModel, ItemCompressOptionBinding>(
-                ItemCompressOptionBinding::inflate
-            ) {
-            override fun bind(
-                itemBinding: ItemCompressOptionBinding,
-                item: CompressProfileModel,
-                position: Int
-            ) {
-                itemBinding.container.isSelected = item.selected
-                itemBinding.title.text = item.title
-                itemBinding.message.text = item.message
-                itemBinding.container.setOnClickListener {
-                    adapter.updateSelectionByPredicate {
-                        it.selected = item.title == it.title
-                        return@updateSelectionByPredicate true
-                    }
-                    binding.customProfile.isSelected = false
-                    viewModel.onProfileUpdated(item)
+    private val adapter by lazy {
+        object : FragmentStateAdapter(childFragmentManager, this.lifecycle) {
+            override fun getItemCount(): Int {
+                return if (viewModel.videoInfo.value == null) 0 else 3
+            }
+
+            override fun createFragment(position: Int): Fragment {
+                val info = viewModel.videoInfo.value ?: return Fragment()
+                return when (position) {
+                    0 -> ResolutionSelectionFragment()
+                    1 -> ResolutionSelectionFragment()
+                    else -> CustomResQualityFragment.newInstance(info)
                 }
             }
+
         }
     }
 
@@ -65,19 +66,25 @@ class CompressOptionsFragment :
     }
 
     override fun initView() {
-        binding.profilesList.adapter = adapter
-        binding.profilesList.itemAnimator = null
         binding.thumbImage.adapter = pagerAdapter
-        binding.compressBtn.setOnClickListener {
-            viewModel.compressVideo()
-        }
-        binding.customProfile.setOnClickListener {
-            it.isSelected = true
-            adapter.updateSelectionByPredicate { model ->
-                model.selected = false
-                return@updateSelectionByPredicate true
+        binding.viewPager.adapter = adapter
+        val mediator = TabLayoutMediator(
+            binding.tabLayout,
+            binding.viewPager
+        ) { tab, position ->
+            when (position) {
+                0 -> {
+                    tab.text = "High Quality"
+                }
+                1 -> {
+                    tab.text = "Low quality"
+                }
+                2 -> {
+                    tab.text = "Custom"
+                }
             }
         }
+        mediator.attach()
         binding.toolbar.setNavigationIcon(R.drawable.ic_baseline_arrow_back_24)
         binding.toolbar.setNavigationOnClickListener {
             activity?.onBackPressed()
@@ -91,7 +98,9 @@ class CompressOptionsFragment :
         viewModel.selectedFiles.observe(viewLifecycleOwner) { it ->
             pagerAdapter.setItems(it.map { uri -> uri.toString() })
         }
-
+        viewModel.videoInfo.observe(viewLifecycleOwner) {
+            adapter.notifyDataSetChanged()
+        }
         viewModel.events.observe(viewLifecycleOwner) {
             if (it.hasBeenHandled) return@observe
             when (it.what) {
@@ -100,13 +109,18 @@ class CompressOptionsFragment :
                 }
             }
         }
-        viewModel.profiles.observe(viewLifecycleOwner) {
-            adapter.setItems(it)
-        }
     }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
         grabListener<CompressScreenCallbacks> { registerObserver(it) }
+    }
+
+    override fun onResolutionChange(resolution: Int) {
+        Log.d("TEST_LOG", "onChange:resolution $resolution")
+    }
+
+    override fun onBitrateChange(bitrate: Int) {
+        Log.d("TEST_LOG", "onChange:bitrate $bitrate")
     }
 }

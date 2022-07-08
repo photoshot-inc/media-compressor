@@ -1,16 +1,19 @@
 package videoeditor.compressor.video.features.compress
 
+import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.*
 import devs.core.OneTimeEvent
+import devs.core.utils.safeRun
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import videoeditor.compressor.video.di.injector
 import videoeditor.compressor.video.events.ActivityEvents
 import videoeditor.compressor.video.events.broadcast
 import videoeditor.compressor.video.models.AppInfo
+import videoeditor.compressor.video.models.VideoInfo
 import videoeditor.compressor.video.tasks.ProcessInfoTracker
 import java.io.File
 import javax.inject.Inject
@@ -36,11 +39,9 @@ class CompressOptionViewModel(private val savedStateHandle: SavedStateHandle) : 
 
     private val _events = MutableLiveData<OneTimeEvent>()
     val events: LiveData<OneTimeEvent> get() = _events
+    val videoInfo = MutableLiveData<VideoInfo?>(null)
     private val _selectedUris = MutableLiveData<List<Uri>>(listOf())
     val selectedFiles: LiveData<List<Uri>> get() = _selectedUris
-
-    private val _profiles = MutableLiveData<List<CompressProfileModel>>(listOf())
-    val profiles: LiveData<List<CompressProfileModel>> get() = _profiles
 
     private var selectedProfile: CompressProfileModel? = null
 
@@ -52,48 +53,40 @@ class CompressOptionViewModel(private val savedStateHandle: SavedStateHandle) : 
 
     init {
         injector.inject(this)
-        initialize(savedStateHandle)
+        viewModelScope.launch(Dispatchers.IO) {
+            safeRun {
+                initialize(savedStateHandle)
+            }
+        }
     }
 
     private fun initialize(savedStateHandle: SavedStateHandle) {
         Log.d(TAG, "initialize: ${savedStateHandle.get<String>(IntentKeys.EXTRA_URI.str)}")
-        val uri = savedStateHandle.get<String>(IntentKeys.EXTRA_URI.str)
-        if (uri != null) {
-            _selectedUris.value = listOf(Uri.parse(uri))
-        }
-        _profiles.postValue(getProfiles())
+        val uri = savedStateHandle.get<String>(IntentKeys.EXTRA_URI.str)!!
+        _selectedUris.postValue(listOf(Uri.parse(uri)))
+        parseVideoInfo(uri)
     }
 
-    private fun getProfiles(): List<CompressProfileModel>? {
-        val items = mutableListOf<CompressProfileModel>()
-        items.add(
-            CompressProfileModel(
-                "High", "Resolution: 75%\nQuality: 75%", 0, 75, 75,
-                isPercent = true,
-                selected = true
+    private fun parseVideoInfo(uri: String) {
+        val mediaMetadataRetriever = MediaMetadataRetriever()
+        val descriptor = appInfo.context.contentResolver.openFileDescriptor(Uri.parse(uri), "r")
+        mediaMetadataRetriever.setDataSource(descriptor!!.fileDescriptor)
+        val width =
+            mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+        val height =
+            mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+        val bitrate =
+            mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)
+        val title =
+            mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+        val info =
+            VideoInfo(
+                title ?: "unknown",
+                width = width!!.toInt(),
+                height!!.toInt(),
+                bitrate = bitrate!!.toInt()
             )
-        )
-        items.add(
-            CompressProfileModel(
-                "Medium",
-                "Resolution: 50%\nQuality: 50%",
-                0,
-                50,
-                50,
-                isPercent = true
-            )
-        )
-        items.add(
-            CompressProfileModel(
-                "Low",
-                "Resolution: 33%\nQuality: 33%",
-                0,
-                33,
-                33,
-                isPercent = true
-            )
-        )
-        return items
+        videoInfo.postValue(info)
     }
 
     fun compressVideo() {
