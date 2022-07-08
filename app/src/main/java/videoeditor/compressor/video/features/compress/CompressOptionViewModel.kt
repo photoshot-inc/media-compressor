@@ -1,0 +1,123 @@
+package videoeditor.compressor.video.features.compress
+
+import android.net.Uri
+import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import devs.core.OneTimeEvent
+import videoeditor.compressor.video.di.injector
+import videoeditor.compressor.video.events.ActivityEvents
+import videoeditor.compressor.video.events.broadcast
+import videoeditor.compressor.video.models.AppInfo
+import videoeditor.compressor.video.tasks.ProcessInfoTracker
+import java.io.File
+import javax.inject.Inject
+
+object CompressScreenEventType {
+    const val PROCESS_START_ERROR = 1
+}
+
+data class CompressProfileModel(
+    val title: String,
+    val message: String,
+    val payload: Any,
+    val resolution: Int = 100,
+    val bitrate: Int = 100,
+    val isPercent: Boolean = false,
+    var selected: Boolean = false,
+)
+
+class CompressOptionViewModel(private val savedStateHandle: SavedStateHandle) : ViewModel() {
+    companion object {
+        private const val TAG = "CompressOptionViewModel"
+    }
+
+    private val _events = MutableLiveData<OneTimeEvent>()
+    val events: LiveData<OneTimeEvent> get() = _events
+    private val _selectedUris = MutableLiveData<List<Uri>>(listOf())
+    val selectedFiles: LiveData<List<Uri>> get() = _selectedUris
+
+    private val _profiles = MutableLiveData<List<CompressProfileModel>>(listOf())
+    val profiles: LiveData<List<CompressProfileModel>> get() = _profiles
+
+    private var selectedProfile: CompressProfileModel? = null
+
+    @Inject
+    lateinit var appInfo: AppInfo
+
+    @Inject
+    lateinit var tracker: ProcessInfoTracker
+
+    init {
+        injector.inject(this)
+        initialize(savedStateHandle)
+    }
+
+    private fun initialize(savedStateHandle: SavedStateHandle) {
+        Log.d(TAG, "initialize: ${savedStateHandle.get<String>(IntentKeys.EXTRA_URI.str)}")
+        val uri = savedStateHandle.get<String>(IntentKeys.EXTRA_URI.str)
+        if (uri != null) {
+            _selectedUris.value = listOf(Uri.parse(uri))
+        }
+        _profiles.postValue(getProfiles())
+    }
+
+    private fun getProfiles(): List<CompressProfileModel>? {
+        val items = mutableListOf<CompressProfileModel>()
+        items.add(
+            CompressProfileModel(
+                "High", "Resolution: 75%\nQuality: 75%", 0, 75, 75,
+                isPercent = true,
+                selected = true
+            )
+        )
+        items.add(
+            CompressProfileModel(
+                "Medium",
+                "Resolution: 50%\nQuality: 50%",
+                0,
+                50,
+                50,
+                isPercent = true
+            )
+        )
+        items.add(
+            CompressProfileModel(
+                "Low",
+                "Resolution: 33%\nQuality: 33%",
+                0,
+                33,
+                33,
+                isPercent = true
+            )
+        )
+        return items
+    }
+
+    fun compressVideo() {
+        val outputDir = "/storage/emulated/0/download/video compressor"
+        if (!File(outputDir).exists()) File(outputDir).mkdirs()
+        val outputPath = "$outputDir/compressed_${System.currentTimeMillis()}.mp4"
+        val processInfo =
+            ProcessingInfo(
+                System.currentTimeMillis().toInt(),
+                _selectedUris.value!![0].toString(),
+                100,
+                100,
+                100,
+                outputPath
+            )
+        tracker.save(processInfo, onSuccess = {
+            ActivityEvents.ShowProcessingScreenEvent.broadcast()
+        }, onError = {
+            _events.postValue(OneTimeEvent(CompressScreenEventType.PROCESS_START_ERROR, 0))
+        })
+    }
+
+    fun onProfileUpdated(item: CompressProfileModel) {
+        selectedProfile = item
+    }
+}
+
