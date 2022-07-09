@@ -47,7 +47,7 @@ dependencies {
     implementation project(path: ':core')
     implementation project(path: ':file-browser')
     implementation project(path: ':processor')
-    implementation project(path: ':adloader')
+    implementation project(path: ':admob-lib')
     implementation project(path: ':rangeseekbar')
 
     final def daggerVersion = '2.29'
