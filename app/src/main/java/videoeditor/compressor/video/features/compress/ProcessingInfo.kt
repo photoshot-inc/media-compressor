@@ -11,7 +11,7 @@ data class ProcessingInfo(
     @SerializedName("height")
     val outputHeight: Int,
     @SerializedName("bitrate")
-    val boutputBitrate: Int,
+    val outputBitrate: Long,
     @SerializedName("outputPath")
     val outputPath: String,
     @SerializedName("inputInfo")

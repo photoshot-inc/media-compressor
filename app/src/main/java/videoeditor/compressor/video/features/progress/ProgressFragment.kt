@@ -15,6 +15,7 @@ import videoeditor.compressor.video.Utils.readableSize
 import videoeditor.compressor.video.databinding.FragmentProgressBinding
 import videoeditor.compressor.video.events.ActivityEvents
 import videoeditor.compressor.video.events.broadcast
+import videoeditor.compressor.video.features.compress.ProcessingInfo
 import videoeditor.compressor.video.service.CompressionService
 import videoeditor.compressor.video.service.ServiceState
 import java.io.File
@@ -25,12 +26,25 @@ class ProgressFragment : BaseObservableFragment<FragmentProgressBinding,
 
     }
 
+    private var processingInfo: ProcessingInfo? = null
     var mService: CompressionService? = null
     override fun initView() {
         context?.let { CompressionService.startService(it) }
         loadNativeAd(binding.adContainer)
         binding.cancelBtn.setOnClickListener {
             mService?.cancel()
+        }
+        binding.homeBtn.setOnClickListener {
+            ActivityEvents.ShowHomeScreen.broadcast()
+        }
+        binding.shareBtn.setOnClickListener {
+            if (processingInfo == null) return@setOnClickListener
+            ActivityEvents.ShareFile(processingInfo!!.outputPath).broadcast()
+        }
+        binding.deleteBtn.setOnClickListener {
+            if (processingInfo == null) return@setOnClickListener
+            File(processingInfo!!.outputPath).delete()
+            activity?.onBackPressed()
         }
     }
 
@@ -66,6 +80,7 @@ class ProgressFragment : BaseObservableFragment<FragmentProgressBinding,
                 state is ServiceState.Processing || state is ServiceState.Started
             when (state) {
                 is ServiceState.Success -> {
+                    processingInfo = state.data
                     binding.outputVideoThumb.load(state.data.outputPath)
                     binding.outputVideoThumb.setOnClickListener {
                         ActivityEvents.PlayVideoEvent(state.data.outputPath).broadcast()

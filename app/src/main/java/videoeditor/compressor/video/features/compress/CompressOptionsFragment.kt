@@ -6,7 +6,6 @@ import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.devs.adloader.AdProvider.loadBannerAd
 import com.google.android.material.tabs.TabLayoutMediator
@@ -14,9 +13,7 @@ import com.inspiration.imagepicker.domain.models.FileModel
 import devs.core.AbstractAdapter
 import devs.core.BaseObservableFragment
 import devs.core.utils.load
-import kotlinx.coroutines.*
 import videoeditor.compressor.video.R
-import videoeditor.compressor.video.Utils
 import videoeditor.compressor.video.Utils.readableSize
 import videoeditor.compressor.video.Utils.toFormattedDuration
 import videoeditor.compressor.video.databinding.FragmentCompressOptionsBinding
@@ -74,8 +71,8 @@ class CompressOptionsFragment :
                 val info = viewModel.videoInfo.value ?: return Fragment()
                 Log.d("TAGTAGTAGTAG", "createFragment: $position")
                 return when (position) {
-                    0 -> ResolutionSelectionFragment()
-                    1 -> ResolutionSelectionFragment()
+                    0 -> ResolutionSelectionFragment.newInstance(info)
+                    1 -> ResolutionSelectionFragment.newInstance(info)
                     else -> CustomResQualityFragment.newInstance(info)
                 }
             }
@@ -141,7 +138,7 @@ class CompressOptionsFragment :
         Log.d("TEST_LOG", "onChange:bitrate $bitrate")
     }
 
-    override fun onStartCompression(width: Int, height: Int, bitrate: Int) {
+    override fun onStartCompression(width: Int, height: Int, bitrate: Long) {
         viewModel.compressVideo(width, height, bitrate)
     }
 }

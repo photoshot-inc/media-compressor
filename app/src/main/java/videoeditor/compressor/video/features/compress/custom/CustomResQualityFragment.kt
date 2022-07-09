@@ -68,7 +68,7 @@ class CustomResQualityFragment :
                 it.onStartCompression(
                     (videoInfo.width * resProgress).toInt(),
                     (videoInfo.height * resProgress).toInt(),
-                    (videoInfo.bitrate * bitProgress).toInt()
+                    (videoInfo.bitrate * bitProgress).toLong()
                 )
             }
         }

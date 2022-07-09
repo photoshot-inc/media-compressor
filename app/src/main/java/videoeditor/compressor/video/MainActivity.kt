@@ -3,6 +3,7 @@ package videoeditor.compressor.video
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import com.inspiration.imagepicker.domain.models.FileModel
 import com.inspiration.imagepicker.presentation.fragments.FilePicker
 import com.inspiration.imagepicker.presentation.fragments.FilePickerCallback
@@ -75,6 +76,15 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         when (event) {
             ActivityEvents.ShowProcessingScreenEvent -> showScreen(ProgressFragment())
             is ActivityEvents.PlayVideoEvent -> showScreen(VideoPlayerFragment.newInstance(event.path))
+            is ActivityEvents.ShareFile -> TODO()
+            is ActivityEvents.ShowInterstitial -> TODO()
+            ActivityEvents.ShowHomeScreen -> {
+                supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+                showScreen(HomeFragment())
+            }
+            is ActivityEvents.ShowScreen -> {
+                showScreen(event.fragment)
+            }
         }
     }
 }

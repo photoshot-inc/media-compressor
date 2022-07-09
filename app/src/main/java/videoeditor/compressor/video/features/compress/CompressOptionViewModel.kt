@@ -1,11 +1,13 @@
 package videoeditor.compressor.video.features.compress
 
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
 import androidx.lifecycle.*
 import com.inspiration.imagepicker.domain.models.FileModel
+import com.linkedin.android.litr.MediaTransformer
 import devs.core.OneTimeEvent
 import devs.core.utils.safeRun
 import kotlinx.coroutines.Dispatchers
@@ -85,6 +87,9 @@ class CompressOptionViewModel(private val savedStateHandle: SavedStateHandle) : 
             mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
         val rotation =
             mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+        val fps =
+            mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)
+        Log.d(TAG, "parseVideoInfo: $fps")
         val info =
             VideoInfo(
                 selectedFile.title,
@@ -101,7 +106,7 @@ class CompressOptionViewModel(private val savedStateHandle: SavedStateHandle) : 
         _selectedUris.postValue(listOf(info))
     }
 
-    fun compressVideo(width: Int, height: Int, bitrate: Int) {
+    fun compressVideo(width: Int, height: Int, bitrate: Long) {
         val outputDir =
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES).absolutePath + "/Media Compressor"
         if (!File(outputDir).exists()) File(outputDir).mkdirs()

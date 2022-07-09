@@ -10,15 +10,12 @@ import android.media.MediaFormat
 import android.net.Uri
 import android.os.*
 import android.provider.MediaStore
-import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.google.gson.Gson
 import com.linkedin.android.litr.MediaTransformer
 import com.linkedin.android.litr.TransformationListener
 import com.linkedin.android.litr.analytics.TrackTransformationInfo
-import com.linkedin.android.litr.io.MediaExtractorMediaSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,7 +23,6 @@ import devs.core.logAsInfo
 import devs.core.logError
 import devs.core.utils.safeRun
 import videoeditor.compressor.video.MainActivity
-import videoeditor.compressor.video.R
 import videoeditor.compressor.video.di.injector
 import videoeditor.compressor.video.features.compress.ProcessStatus
 import videoeditor.compressor.video.features.compress.ProcessingInfo
@@ -138,19 +134,19 @@ class CompressionService : Service() {
     }
 
     private fun getOutputVideoFormat(processingInfo: ProcessingInfo): MediaFormat {
-        val mimeType = MediaFormat.MIMETYPE_VIDEO_AVC
-        var width = processingInfo.outputWidth
-        var height = processingInfo.outputHeight
-        var frameRate = 30
-        var bitrate = processingInfo.boutputBitrate
+        val mimeType = MediaFormat.MIMETYPE_VIDEO_HEVC
+        val width = processingInfo.outputWidth
+        val height = processingInfo.outputHeight
+        val frameRate = 30
+        val bitrate = processingInfo.outputBitrate
         val colorFormat = MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
 
 
         val format = MediaFormat.createVideoFormat(mimeType, width, height)
         format.setInteger(MediaFormat.KEY_COLOR_FORMAT, colorFormat)
-        format.setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
-//        format.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate)
-//        format.setInteger(MediaFormat.KEY_CAPTURE_RATE, frameRate)
+        format.setInteger(MediaFormat.KEY_BIT_RATE, bitrate.toInt())
+        format.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate)
+        format.setInteger(MediaFormat.KEY_CAPTURE_RATE, frameRate)
 
 //        format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, width * height)
         format.setInteger(MediaFormat.KEY_MAX_WIDTH, width)
