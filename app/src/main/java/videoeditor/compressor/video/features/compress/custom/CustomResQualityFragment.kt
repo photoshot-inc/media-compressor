@@ -1,18 +1,14 @@
 package videoeditor.compressor.video.features.compress.custom
 
 import android.content.Context
-import android.util.Log
-import android.widget.SeekBar
 import androidx.core.os.bundleOf
-import devs.core.AbstractAdapter
+import com.jaygoo.widget.OnRangeChangedListener
+import com.jaygoo.widget.RangeSeekBar
 import devs.core.BaseObservableFragment
 import videoeditor.compressor.video.databinding.FragmentCustomBinding
-import videoeditor.compressor.video.databinding.FragmentResolutionBinding
-import videoeditor.compressor.video.databinding.ItemResolutionListBinding
 import videoeditor.compressor.video.features.compress.IntentKeys
 import videoeditor.compressor.video.features.compress.resolution.ConfigurationUpdateLister
 import videoeditor.compressor.video.models.VideoInfo
-import java.io.Serializable
 import kotlin.math.min
 
 class CustomResQualityFragment :
@@ -25,15 +21,27 @@ class CustomResQualityFragment :
         }
     }
 
+    private fun updateResolutionTxt(progress: Float) {
+        binding.resolution.text =
+            "${(videoInfo.width * progress).toInt()}x${(videoInfo.height * progress).toInt()}"
+    }
+
+    private fun updateBitrateTxt(progress: Float) {
+        binding.bitrate.text = "${(videoInfo.bitrate * progress).toInt()} kb/s"
+    }
+
     lateinit var videoInfo: VideoInfo
     var resolution: Int = 0
     override fun initView() {
         videoInfo = arguments?.get(IntentKeys.EXTRA_MODEL.str) as VideoInfo
         resolution = min(videoInfo.height, videoInfo.width)
-        binding.resolutionSeekbar.setOnSeekBarChangeListener(object : SeekListener() {
+        updateResolutionTxt(0.75f)
+        updateBitrateTxt(0.75f)
+        binding.resolutionSeekbar.setProgress(0.75f)
+        binding.bitrateSeekbar.setProgress(0.75f)
+        binding.resolutionSeekbar.setOnRangeChangedListener(object : SeekListener() {
             override fun onMove(progress: Float) {
-                binding.resolution.text =
-                    "${(videoInfo.width * progress).toInt()}x${(videoInfo.height * progress).toInt()}"
+                updateResolutionTxt(progress)
             }
 
             override fun onStop(progress: Float) {
@@ -42,10 +50,9 @@ class CustomResQualityFragment :
                 }
             }
         })
-        binding.bitrateSeekbar.setOnSeekBarChangeListener(object : SeekListener() {
-
+        binding.bitrateSeekbar.setOnRangeChangedListener(object : SeekListener() {
             override fun onMove(progress: Float) {
-                binding.bitrate.text = "${(videoInfo.bitrate * progress).toInt()} kb/s"
+                updateBitrateTxt(progress)
             }
 
             override fun onStop(progress: Float) {
@@ -54,6 +61,17 @@ class CustomResQualityFragment :
                 }
             }
         })
+        binding.compressBtn.setOnClickListener {
+            val resProgress = binding.resolutionSeekbar.leftSeekBar.progress
+            val bitProgress = binding.resolutionSeekbar.leftSeekBar.progress
+            notify {
+                it.onStartCompression(
+                    (videoInfo.width * resProgress).toInt(),
+                    (videoInfo.height * resProgress).toInt(),
+                    (videoInfo.bitrate * bitProgress).toInt()
+                )
+            }
+        }
     }
 
 
@@ -63,19 +81,25 @@ class CustomResQualityFragment :
     }
 }
 
-abstract class SeekListener : SeekBar.OnSeekBarChangeListener {
+abstract class SeekListener : OnRangeChangedListener {
     open fun onStart(progress: Float) {}
     open fun onStop(progress: Float) {}
     open fun onMove(progress: Float) {}
-    override fun onProgressChanged(p0: SeekBar?, p1: Int, p2: Boolean) {
-        onMove(p1 / 100f)
+    override fun onStartTrackingTouch(view: RangeSeekBar, isLeft: Boolean) {
+        onStart(view.leftSeekBar.progress)
     }
 
-    override fun onStartTrackingTouch(p0: SeekBar) {
-        onStart(p0.progress / 100f)
+    override fun onRangeChanged(
+        view: RangeSeekBar?,
+        leftValue: Float,
+        rightValue: Float,
+        isFromUser: Boolean
+    ) {
+        onMove(leftValue)
     }
 
-    override fun onStopTrackingTouch(p0: SeekBar) {
-        onStop(p0.progress / 100f)
+    override fun onStopTrackingTouch(view: RangeSeekBar, isLeft: Boolean) {
+        onStop(view.leftSeekBar.progress)
     }
+
 }

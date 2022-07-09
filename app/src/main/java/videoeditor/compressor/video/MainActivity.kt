@@ -69,9 +69,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
             finish()
             return
         }
-        supportFragmentManager.fragments.lastOrNull()?.let {
-            it.dismissWithAnimation(yTranslate = 0.2f)
-        } ?: super.onBackPressed()
+        super.onBackPressed()
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)

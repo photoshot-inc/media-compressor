@@ -47,16 +47,21 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="@id/resTxt" />
 
-            <SeekBar
+            <com.jaygoo.widget.RangeSeekBar
                 android:id="@+id/resolutionSeekbar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
-                android:progress="75"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/resTxt" />
+                app:layout_constraintTop_toBottomOf="@id/resTxt"
+                app:rsb_gravity="center"
+                app:rsb_max="1.0"
+                app:rsb_min="0.05"
+                app:rsb_mode="single"
+                app:rsb_progress_color="?colorPrimary"
+                app:rsb_progress_height="6dp" />
 
             <TextView
                 android:id="@+id/bitrateTxt"
@@ -67,6 +72,12 @@
                 android:paddingVertical="6dp"
                 android:text="Bitrate"
                 app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/resolutionSeekbar" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0.2dp"
+                android:background="@color/white"
                 app:layout_constraintTop_toBottomOf="@id/resolutionSeekbar" />
 
             <TextView
@@ -80,15 +91,20 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="@id/bitrateTxt" />
 
-            <SeekBar
+            <com.jaygoo.widget.RangeSeekBar
                 android:id="@+id/bitrateSeekbar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
-                android:progress="75"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/bitrateTxt" />
+                app:layout_constraintTop_toBottomOf="@id/bitrateTxt"
+                app:rsb_gravity="center"
+                app:rsb_max="1.0"
+                app:rsb_min="0.05"
+                app:rsb_mode="single"
+                app:rsb_progress_color="?colorPrimary"
+                app:rsb_progress_height="6dp" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
 

@@ -1,9 +1,13 @@
 package devs.core.utils
 
+import android.view.Gravity
 import androidx.annotation.AnimRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
+import androidx.transition.Fade
+import androidx.transition.Slide
 import devs.core.R
+
 fun FragmentActivity.replaceFragment(
     fragment: Fragment,
     containerId: Int,
@@ -13,8 +17,11 @@ fun FragmentActivity.replaceFragment(
     @AnimRes popEnter: Int = 0,
     @AnimRes popExit: Int = 0
 ) = safeRun {
+    fragment.enterTransition = Slide(Gravity.RIGHT).apply { duration = 200 }
+    fragment.exitTransition = Fade().apply { duration = 200 }
+
     supportFragmentManager.beginTransaction()
-        .setCustomAnimations(enterAnim, exitAnim, popEnter, popExit)
+//        .setCustomAnimations(enterAnim, exitAnim, popEnter, popExit)
         .replace(containerId, fragment)
         .let {
             if (addToBackStack) it.addToBackStack(fragment.javaClass.simpleName)

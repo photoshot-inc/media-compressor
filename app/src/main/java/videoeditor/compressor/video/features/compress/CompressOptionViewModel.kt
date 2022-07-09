@@ -3,6 +3,7 @@ package videoeditor.compressor.video.features.compress
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Environment
 import android.util.Log
 import androidx.lifecycle.*
 import devs.core.OneTimeEvent
@@ -40,8 +41,8 @@ class CompressOptionViewModel(private val savedStateHandle: SavedStateHandle) : 
     private val _events = MutableLiveData<OneTimeEvent>()
     val events: LiveData<OneTimeEvent> get() = _events
     val videoInfo = MutableLiveData<VideoInfo?>(null)
-    private val _selectedUris = MutableLiveData<List<Uri>>(listOf())
-    val selectedFiles: LiveData<List<Uri>> get() = _selectedUris
+    private val _selectedUris = MutableLiveData<List<VideoInfo>>(listOf())
+    val selectedFiles: LiveData<List<VideoInfo>> get() = _selectedUris
 
     private var selectedProfile: CompressProfileModel? = null
 
@@ -63,7 +64,6 @@ class CompressOptionViewModel(private val savedStateHandle: SavedStateHandle) : 
     private fun initialize(savedStateHandle: SavedStateHandle) {
         Log.d(TAG, "initialize: ${savedStateHandle.get<String>(IntentKeys.EXTRA_URI.str)}")
         val uri = savedStateHandle.get<String>(IntentKeys.EXTRA_URI.str)!!
-        _selectedUris.postValue(listOf(Uri.parse(uri)))
         parseVideoInfo(uri)
     }
 
@@ -82,24 +82,27 @@ class CompressOptionViewModel(private val savedStateHandle: SavedStateHandle) : 
         val info =
             VideoInfo(
                 title ?: "unknown",
+                uri,
                 width = width!!.toInt(),
                 height!!.toInt(),
                 bitrate = bitrate!!.toInt()
             )
         videoInfo.postValue(info)
+        _selectedUris.postValue(listOf(info))
     }
 
-    fun compressVideo() {
-        val outputDir = "/storage/emulated/0/download/video compressor"
+    fun compressVideo(width: Int, height: Int, bitrate: Int) {
+        val outputDir =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES).absolutePath + "/Media Compressor"
         if (!File(outputDir).exists()) File(outputDir).mkdirs()
         val outputPath = "$outputDir/compressed_${System.currentTimeMillis()}.mp4"
         val processInfo =
             ProcessingInfo(
                 System.currentTimeMillis().toInt(),
-                _selectedUris.value!![0].toString(),
-                100,
-                100,
-                100,
+                videoInfo.value!!.uri,
+                width,
+                height,
+                bitrate,
                 outputPath
             )
         tracker.save(processInfo, onSuccess = {

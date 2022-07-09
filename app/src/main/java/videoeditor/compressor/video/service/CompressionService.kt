@@ -12,7 +12,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.linkedin.android.litr.MediaTransformer
+import com.linkedin.android.litr.TrackTransform
 import com.linkedin.android.litr.TransformationListener
+import com.linkedin.android.litr.TransformationOptions
 import com.linkedin.android.litr.analytics.TrackTransformationInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -139,6 +141,7 @@ class CompressionService : Service() {
         _progress.postValue(-1)
         val compressor = MediaTransformer(this)
         val processId = 5.toString()
+       val trackTransform =  TrackTransformationInfo()
         compressor.transform(
             processId,
             Uri.parse(processingInfo.inputUri),

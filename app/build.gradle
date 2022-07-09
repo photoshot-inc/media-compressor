@@ -48,6 +48,7 @@ dependencies {
     implementation project(path: ':file-browser')
     implementation project(path: ':processor')
     implementation project(path: ':adloader')
+    implementation project(path: ':rangeseekbar')
 
     final def daggerVersion = '2.29'
     implementation "com.google.dagger:dagger:$daggerVersion"

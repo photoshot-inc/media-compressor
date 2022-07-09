@@ -6,16 +6,16 @@ import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.devs.adloader.AdProvider.loadBannerAd
-import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import devs.core.AbstractAdapter
 import devs.core.BaseObservableFragment
 import devs.core.utils.load
+import kotlinx.coroutines.*
 import videoeditor.compressor.video.R
 import videoeditor.compressor.video.databinding.FragmentCompressOptionsBinding
-import videoeditor.compressor.video.databinding.ItemCompressOptionBinding
 import videoeditor.compressor.video.databinding.LayoutThumbImageBinding
 import videoeditor.compressor.video.features.compress.custom.CustomResQualityFragment
 import videoeditor.compressor.video.features.compress.resolution.ConfigurationUpdateLister
@@ -38,14 +38,29 @@ class CompressOptionsFragment :
     }
 
     private val viewModel by viewModels<CompressOptionViewModel>()
-    private val adapter by lazy {
-        object : FragmentStateAdapter(childFragmentManager, this.lifecycle) {
+    private lateinit var adapter: FragmentStateAdapter
+
+    private lateinit var pagerAdapter: AbstractAdapter<String, LayoutThumbImageBinding>
+
+    override fun initView() {
+        pagerAdapter = object :
+            AbstractAdapter<String, LayoutThumbImageBinding>(LayoutThumbImageBinding::inflate) {
+            override fun bind(
+                itemBinding: LayoutThumbImageBinding,
+                item: String,
+                position: Int
+            ) {
+                itemBinding.thumb.load(item)
+            }
+        }
+        adapter = object : FragmentStateAdapter(this@CompressOptionsFragment) {
             override fun getItemCount(): Int {
                 return if (viewModel.videoInfo.value == null) 0 else 3
             }
 
             override fun createFragment(position: Int): Fragment {
                 val info = viewModel.videoInfo.value ?: return Fragment()
+                Log.d("TAGTAGTAGTAG", "createFragment: $position")
                 return when (position) {
                     0 -> ResolutionSelectionFragment()
                     1 -> ResolutionSelectionFragment()
@@ -54,18 +69,7 @@ class CompressOptionsFragment :
             }
 
         }
-    }
 
-    private val pagerAdapter by lazy {
-        object :
-            AbstractAdapter<String, LayoutThumbImageBinding>(LayoutThumbImageBinding::inflate) {
-            override fun bind(itemBinding: LayoutThumbImageBinding, item: String, position: Int) {
-                itemBinding.thumb.load(item)
-            }
-        }
-    }
-
-    override fun initView() {
         binding.thumbImage.adapter = pagerAdapter
         binding.viewPager.adapter = adapter
         val mediator = TabLayoutMediator(
@@ -96,7 +100,7 @@ class CompressOptionsFragment :
 
     private fun initObservers() {
         viewModel.selectedFiles.observe(viewLifecycleOwner) { it ->
-            pagerAdapter.setItems(it.map { uri -> uri.toString() })
+            pagerAdapter.setItems(it.map { uri -> uri.uri })
         }
         viewModel.videoInfo.observe(viewLifecycleOwner) {
             adapter.notifyDataSetChanged()
@@ -122,5 +126,9 @@ class CompressOptionsFragment :
 
     override fun onBitrateChange(bitrate: Int) {
         Log.d("TEST_LOG", "onChange:bitrate $bitrate")
+    }
+
+    override fun onStartCompression(width: Int, height: Int, bitrate: Int) {
+        viewModel.compressVideo(width, height, bitrate)
     }
 }

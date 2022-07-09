@@ -15,6 +15,7 @@
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/file-browser" />
             <option value="$PROJECT_DIR$/processor" />
+            <option value="$PROJECT_DIR$/rangeseekbar" />
           </set>
         </option>
       </GradleProjectSettings>
