@@ -27,6 +27,9 @@ class VideoPlayerFragment :
 
     override fun initView() {
         binding.playerView.player = player
+        binding.backBtn.setOnClickListener {
+            activity?.onBackPressed()
+        }
         safeRun {
             val path = arguments?.getString(IntentKeys.EXTRA_URI.str)
             val mediaItem = MediaItem.fromUri(Uri.parse(path))

@@ -5,17 +5,20 @@ import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.media.MediaCodecInfo
+import android.media.MediaFormat
 import android.net.Uri
 import android.os.*
 import android.provider.MediaStore
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.google.gson.Gson
 import com.linkedin.android.litr.MediaTransformer
-import com.linkedin.android.litr.TrackTransform
 import com.linkedin.android.litr.TransformationListener
-import com.linkedin.android.litr.TransformationOptions
 import com.linkedin.android.litr.analytics.TrackTransformationInfo
+import com.linkedin.android.litr.io.MediaExtractorMediaSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -69,16 +72,16 @@ class CompressionService : Service() {
 //        notificationIntent.putExtra(BundleKeys.KEY_TAB_INDEX, (1).toInt())
         notificationIntent.flags =
             (Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        AppNotification(this, R.mipmap.ic_launcher, 1, notificationIntent)
+        AppNotification(this, 1, notificationIntent)
     }
 
-    fun getNotification(id: Int): AppNotification {
+    private fun getNotification(id: Int): AppNotification {
         val notificationIntent: Intent =
             Intent(this, MainActivity::class.java)
 //        notificationIntent.putExtra(BundleKeys.KEY_TAB_INDEX, (1).toInt())
         notificationIntent.flags =
             (Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        return AppNotification(this, R.mipmap.ic_launcher, id, notificationIntent)
+        return AppNotification(this, id, notificationIntent)
 
     }
 
@@ -86,7 +89,7 @@ class CompressionService : Service() {
     lateinit var tracker: ProcessInfoTracker
 
     private val scope = CoroutineScope(Dispatchers.IO)
-
+    private var compressor: MediaTransformer? = null
     override fun onBind(p0: Intent?): IBinder {
         return binder
     }
@@ -134,74 +137,158 @@ class CompressionService : Service() {
         stopSelf()
     }
 
+    private fun getOutputVideoFormat(processingInfo: ProcessingInfo): MediaFormat {
+        val mimeType = MediaFormat.MIMETYPE_VIDEO_AVC
+        var width = processingInfo.outputWidth
+        var height = processingInfo.outputHeight
+        var frameRate = 30
+        var bitrate = processingInfo.boutputBitrate
+        val colorFormat = MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
+
+
+        val format = MediaFormat.createVideoFormat(mimeType, width, height)
+        format.setInteger(MediaFormat.KEY_COLOR_FORMAT, colorFormat)
+        format.setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
+//        format.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate)
+//        format.setInteger(MediaFormat.KEY_CAPTURE_RATE, frameRate)
+
+//        format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, width * height)
+        format.setInteger(MediaFormat.KEY_MAX_WIDTH, width)
+        format.setInteger(MediaFormat.KEY_MAX_HEIGHT, height)
+        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 0)
+        return format
+    }
 
     private fun compressVideo(processingInfo: ProcessingInfo) {
         if (inProgress) return
         inProgress = true
         _progress.postValue(-1)
-        val compressor = MediaTransformer(this)
-        val processId = 5.toString()
-       val trackTransform =  TrackTransformationInfo()
-        compressor.transform(
+        _status.postValue(ServiceState.Started)
+        compressor = MediaTransformer(this)
+        compressor?.addTag(0, processingInfo)
+        val processId = processingInfo.processId.toString()
+//        val inputSource =
+//            MediaExtractorMediaSource(this, Uri.parse(processingInfo.inputVideoInfo.uri))
+//        for (i in 0 until inputSource.trackCount) {
+//            Log.d(TAG, "compressVideo: ${Gson().toJson(inputSource.getTrackFormat(i))}")
+//        }
+        val outputFormat: MediaFormat = getOutputVideoFormat(processingInfo)
+        val listener = object : TransformationListener {
+            override fun onStarted(id: String) {
+                "process started".logAsInfo()
+                _status.postValue(ServiceState.Started)
+                processNotification.update(
+                    title = processingInfo.inputVideoInfo.title,
+                    "Compressing"
+                )
+            }
+
+            override fun onProgress(id: String, progress: Float) {
+                "progress $progress".logAsInfo()
+                _progress.postValue((progress * 100).toInt())
+                _status.postValue(ServiceState.Processing)
+                processNotification.updateProgress((progress * 100).toInt())
+            }
+
+            override fun onCompleted(
+                id: String,
+                trackTransformationInfos: MutableList<TrackTransformationInfo>?
+            ) {
+                "process successful".logAsInfo()
+                onFinishedProcess(
+                    processingInfo,
+                    ProcessStatus.SUCCESS,
+                    ServiceState.Success(processingInfo)
+                )
+            }
+
+            override fun onCancelled(
+                id: String,
+                trackTransformationInfos: MutableList<TrackTransformationInfo>?
+            ) {
+                "process cancelled".logAsInfo()
+                onFinishedProcess(processingInfo, ProcessStatus.CANCELLED, ServiceState.Cancelled)
+
+            }
+
+            override fun onError(
+                id: String,
+                cause: Throwable?,
+                trackTransformationInfos: MutableList<TrackTransformationInfo>?
+            ) {
+                cause?.logError("process failed")
+                onFinishedProcess(
+                    processingInfo,
+                    ProcessStatus.FAILED,
+                    ServiceState.Failed("Something went wrong")
+                )
+            }
+        }
+        compressor?.transform(
             processId,
-            Uri.parse(processingInfo.inputUri),
+            Uri.parse(processingInfo.inputVideoInfo.uri),
             processingInfo.outputPath,
+            outputFormat,
             null,
-            null,
-            object : TransformationListener {
-                override fun onStarted(id: String) {
-                    "process started".logAsInfo()
-                    _status.postValue(ServiceState.Started)
-                }
-
-                override fun onProgress(id: String, progress: Float) {
-                    "progress $progress".logAsInfo()
-                    _progress.postValue((progress * 100).toInt())
-                    _status.postValue(ServiceState.Processing)
-                }
-
-                override fun onCompleted(
-                    id: String,
-                    trackTransformationInfos: MutableList<TrackTransformationInfo>?
-                ) {
-                    "process successful".logAsInfo()
-                    inProgress = false
-                    _status.postValue(ServiceState.Success(processingInfo))
-                    processingInfo.processStatus = ProcessStatus.SUCCESS
-                    tracker.save(processingInfo, onSuccess = {
-                        getNotification(processingInfo.processId).showSuccessNotification(
-                            "Compression successful",
-                            processingInfo.outputPath
-                        )
-                        insertIntoGallery(File(processingInfo.outputPath), "video/mp4")
-                        exitFromService()
-                    })
-
-                }
-
-                override fun onCancelled(
-                    id: String,
-                    trackTransformationInfos: MutableList<TrackTransformationInfo>?
-                ) {
-
-                    inProgress = false
-                    "process cancelled".logAsInfo()
-                    _status.postValue(ServiceState.Cancelled)
-                }
-
-                override fun onError(
-                    id: String,
-                    cause: Throwable?,
-                    trackTransformationInfos: MutableList<TrackTransformationInfo>?
-                ) {
-
-                    inProgress = false
-                    cause?.logError("process failed")
-                    _status.postValue(ServiceState.Failed("Something went wrong"))
-                }
-            },
+            listener,
             null
         )
+        /* compressor.transform(
+             processId,
+             Uri.parse(processingInfo.inputUri),
+             processingInfo.outputPath,
+             null,
+             null,
+             listener,
+             null
+         )*/
+    }
+
+    fun onFinishedProcess(
+        processingInfo: ProcessingInfo,
+        status: ProcessStatus,
+        serviceState: ServiceState
+    ) {
+
+        inProgress = false
+        _status.postValue(serviceState)
+        processingInfo.processStatus = status
+        tracker.save(processingInfo, onSuccess = {
+            when (status) {
+                ProcessStatus.IN_QUEUE -> {}
+                ProcessStatus.IN_PROGRESS -> {}
+                ProcessStatus.CANCELLED -> {
+                    getNotification(processingInfo.processId).showSuccessNotification(
+                        "Video Compressor",
+                        "Cancelled by user"
+                    )
+                }
+                ProcessStatus.SUCCESS -> {
+                    getNotification(processingInfo.processId).showSuccessNotification(
+                        "Compression successful",
+                        "saved in: " + processingInfo.outputPath
+                    )
+                    insertIntoGallery(File(processingInfo.outputPath), "video/mp4")
+                    exitFromService()
+                }
+                ProcessStatus.FAILED -> {
+                    getNotification(processingInfo.processId).showSuccessNotification(
+                        "Video Compressor",
+                        "Video Compression failed"
+                    )
+                }
+            }
+            compressor?.removeTag(0);
+            compressor?.release()
+            compressor = null
+            exitFromService()
+        })
+    }
+
+    fun cancel() {
+        if (compressor == null) return
+        val info = (compressor?.getTag(0) as? ProcessingInfo) ?: return
+        compressor?.cancel(info.processId.toString())
     }
 
     private fun insertIntoGallery(file: File, mimeType: String) {

@@ -1,20 +1,21 @@
 package videoeditor.compressor.video.features.compress
 
 import com.google.gson.annotations.SerializedName
+import videoeditor.compressor.video.models.VideoInfo
 
 data class ProcessingInfo(
     @SerializedName("processId")
     val processId: Int,
-    @SerializedName("inputUri")
-    val inputUri: String,
     @SerializedName("width")
-    val width: Int,
+    val outputWidth: Int,
     @SerializedName("height")
-    val height: Int,
+    val outputHeight: Int,
     @SerializedName("bitrate")
-    val bitrate: Int,
+    val boutputBitrate: Int,
     @SerializedName("outputPath")
     val outputPath: String,
+    @SerializedName("inputInfo")
+    val inputVideoInfo: VideoInfo,
     @SerializedName("processStatus")
     var processStatus: ProcessStatus = ProcessStatus.IN_QUEUE
 )

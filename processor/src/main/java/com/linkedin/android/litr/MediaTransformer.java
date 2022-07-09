@@ -45,11 +45,11 @@ import java.util.concurrent.Future;
 
 /**
  * This is the main entry point into LiTr. Using it is very straightforward:
- *  - instantiate with a context (usually, application context)
- *  - transform video/audio, make sure to provide unique tag for each transformation
- *  - listen on each transformation using a listener (callbacks happen on UI thread)
- *  - cancel transformation using its tag
- *  - release when you no longer need it
+ * - instantiate with a context (usually, application context)
+ * - transform video/audio, make sure to provide unique tag for each transformation
+ * - listen on each transformation using a listener (callbacks happen on UI thread)
+ * - cancel transformation using its tag
+ * - release when you no longer need it
  */
 public class MediaTransformer {
     public static final int GRANULARITY_NONE = 0;
@@ -68,9 +68,23 @@ public class MediaTransformer {
 
     private final Map<String, Future<?>> futureMap;
 
+    private final Map<Integer, Object> tags = new HashMap();
+
+    public void addTag(int id, Object data) {
+        tags.put(id, data);
+    }
+    public void removeTag(int id){
+        tags.remove(id);
+    }
+
+    public Object getTag(int id) {
+        return tags.get(id);
+    }
+
     /**
      * Instantiate MediaTransformer. Listener callbacks will be done on main UI thread.
      * All transformations will be done on a single thread.
+     *
      * @param context context with access to source and target URIs and other resources
      */
     public MediaTransformer(@NonNull Context context) {
@@ -79,8 +93,9 @@ public class MediaTransformer {
 
     /**
      * Instantiate MediaTransformer
-     * @param context context with access to source and target URIs and other resources
-     * @param looper {@link Looper} of a thread to marshal listener callbacks to, null for calling back on an ExecutorService thread.
+     *
+     * @param context         context with access to source and target URIs and other resources
+     * @param looper          {@link Looper} of a thread to marshal listener callbacks to, null for calling back on an ExecutorService thread.
      * @param executorService {@link ExecutorService} to use for transformation jobs
      */
     public MediaTransformer(@NonNull Context context, @Nullable Looper looper, @Nullable ExecutorService executorService) {
@@ -94,15 +109,15 @@ public class MediaTransformer {
     /**
      * Transform video and audio track(s): change resolution, frame rate, bitrate, etc. Video track transformation
      * uses default hardware accelerated codecs and OpenGL renderer.
-     *
+     * <p>
      * If overlay(s) are provided, video track(s) will be transcoded with parameters as close to source format as possible.
      *
-     * @param requestId client defined unique id for a transformation request. If not unique, {@link IllegalArgumentException} will be thrown.
-     * @param inputUri input video {@link Uri}
-     * @param outputFilePath Absolute path of output media file
-     * @param targetVideoFormat target format parameters for video track(s), null to keep them as is
-     * @param targetAudioFormat target format parameters for audio track(s), null to keep them as is
-     * @param listener {@link TransformationListener} implementation, to get updates on transformation status/result/progress
+     * @param requestId             client defined unique id for a transformation request. If not unique, {@link IllegalArgumentException} will be thrown.
+     * @param inputUri              input video {@link Uri}
+     * @param outputFilePath        Absolute path of output media file
+     * @param targetVideoFormat     target format parameters for video track(s), null to keep them as is
+     * @param targetAudioFormat     target format parameters for audio track(s), null to keep them as is
+     * @param listener              {@link TransformationListener} implementation, to get updates on transformation status/result/progress
      * @param transformationOptions optional instance of {@link TransformationOptions}
      */
     public void transform(@NonNull String requestId,
@@ -126,17 +141,17 @@ public class MediaTransformer {
     /**
      * Transform video and audio track(s): change resolution, frame rate, bitrate, etc. Video track transformation
      * uses default hardware accelerated codecs and OpenGL renderer.
-     *
+     * <p>
      * If overlay(s) are provided, video track(s) will be transcoded with parameters as close to source format as possible.
-     *
+     * <p>
      * This API is recommended to be used on devices with Android 10+ because it works with scoped storage
      *
-     * @param requestId client defined unique id for a transformation request. If not unique, {@link IllegalArgumentException} will be thrown.
-     * @param inputUri input video {@link Uri}
-     * @param outputUri {@link Uri} of transformation output media
-     * @param targetVideoFormat target format parameters for video track(s), null to keep them as is
-     * @param targetAudioFormat target format parameters for audio track(s), null to keep them as is
-     * @param listener {@link TransformationListener} implementation, to get updates on transformation status/result/progress
+     * @param requestId             client defined unique id for a transformation request. If not unique, {@link IllegalArgumentException} will be thrown.
+     * @param inputUri              input video {@link Uri}
+     * @param outputUri             {@link Uri} of transformation output media
+     * @param targetVideoFormat     target format parameters for video track(s), null to keep them as is
+     * @param targetAudioFormat     target format parameters for audio track(s), null to keep them as is
+     * @param listener              {@link TransformationListener} implementation, to get updates on transformation status/result/progress
      * @param transformationOptions optional instance of {@link TransformationOptions}
      */
     public void transform(@NonNull String requestId,
@@ -216,14 +231,14 @@ public class MediaTransformer {
     /**
      * Transform using specific track transformation instructions. This allows things muxing/demuxing tracks, applying
      * different transformations to different tracks, etc.
-     *
+     * <p>
      * If a track renderer has overlay(s), that track will be transcoded with parameters as close to source format as possible.
      *
-     * @param requestId client defined unique id for a transformation request. If not unique, {@link IllegalArgumentException} will be thrown.
+     * @param requestId       client defined unique id for a transformation request. If not unique, {@link IllegalArgumentException} will be thrown.
      * @param trackTransforms list of track transformation instructions
-     * @param listener {@link TransformationListener} implementation, to get updates on transformation status/result/progress
-     * @param granularity progress reporting granularity. NO_GRANULARITY for per-frame progress reporting,
-     *                    or positive integer value for number of times transformation progress should be reported
+     * @param listener        {@link TransformationListener} implementation, to get updates on transformation status/result/progress
+     * @param granularity     progress reporting granularity. NO_GRANULARITY for per-frame progress reporting,
+     *                        or positive integer value for number of times transformation progress should be reported
      */
     public void transform(@NonNull String requestId,
                           List<TrackTransform> trackTransforms,
@@ -237,30 +252,30 @@ public class MediaTransformer {
         for (int trackIndex = 0; trackIndex < trackCount; trackIndex++) {
             TrackTransform trackTransform = trackTransforms.get(trackIndex);
             if (trackTransform.getTargetFormat() == null
-                && trackTransform.getRenderer() != null
-                && trackTransform.getRenderer().hasFilters()) {
+                    && trackTransform.getRenderer() != null
+                    && trackTransform.getRenderer().hasFilters()) {
                 // target format is null, but track has overlays, which means that we cannot use passthrough transcoder
                 // so we transcode the track using source parameters (resolution, bitrate) as a target
                 MediaFormat targetFormat = createTargetMediaFormat(trackTransform.getMediaSource(),
-                                                                   trackTransform.getSourceTrack());
+                        trackTransform.getSourceTrack());
                 TrackTransform updatedTrackTransform = new TrackTransform.Builder(trackTransform.getMediaSource(),
-                                                                                  trackTransform.getSourceTrack(),
-                                                                                  trackTransform.getMediaTarget())
-                    .setTargetTrack(trackTransform.getTargetTrack())
-                    .setDecoder(trackTransform.getDecoder())
-                    .setEncoder(trackTransform.getEncoder())
-                    .setRenderer(trackTransform.getRenderer())
-                    .setTargetFormat(targetFormat)
-                    .build();
+                        trackTransform.getSourceTrack(),
+                        trackTransform.getMediaTarget())
+                        .setTargetTrack(trackTransform.getTargetTrack())
+                        .setDecoder(trackTransform.getDecoder())
+                        .setEncoder(trackTransform.getEncoder())
+                        .setRenderer(trackTransform.getRenderer())
+                        .setTargetFormat(targetFormat)
+                        .build();
 
                 trackTransforms.set(trackIndex, updatedTrackTransform);
             }
         }
 
         TransformationJob transformationJob = new TransformationJob(requestId,
-                                                                    trackTransforms,
-                                                                    granularity,
-                                                                    new MarshallingTransformationListener(futureMap, listener, looper));
+                trackTransforms,
+                granularity,
+                new MarshallingTransformationListener(futureMap, listener, looper));
         Future<?> future = executorService.submit(transformationJob);
 
         futureMap.put(requestId, future);
@@ -268,6 +283,7 @@ public class MediaTransformer {
 
     /**
      * Cancel a transformation request.
+     *
      * @param requestId unique id of a job to be cancelled
      */
     public void cancel(@NonNull String requestId) {
@@ -288,9 +304,10 @@ public class MediaTransformer {
      * Estimates target size of a target video based on provided target formats. If no target audio format is specified,
      * uses 320 Kbps bitrate to estimate audio track size, if cannot extract audio bitrate. If track duration is not available,
      * maximum track duration will be used. If track bitrate cannot be extracted, track will not be used to estimate size.
-     * @param inputUri {@link Uri} of a source video
-     * @param targetVideoFormat video format for a transformation target
-     * @param targetAudioFormat audio format for a transformation target
+     *
+     * @param inputUri              {@link Uri} of a source video
+     * @param targetVideoFormat     video format for a transformation target
+     * @param targetAudioFormat     audio format for a transformation target
      * @param transformationOptions optional transformation options (such as source range)
      * @return estimated size of a transcoding target video file in bytes, -1 otherwise
      */
@@ -300,8 +317,8 @@ public class MediaTransformer {
                                             @Nullable TransformationOptions transformationOptions) {
         try {
             MediaSource mediaSource = transformationOptions == null
-            ? new MediaExtractorMediaSource(context, inputUri)
-            : new MediaExtractorMediaSource(context, inputUri, transformationOptions.sourceMediaRange);
+                    ? new MediaExtractorMediaSource(context, inputUri)
+                    : new MediaExtractorMediaSource(context, inputUri, transformationOptions.sourceMediaRange);
             return TranscoderUtils.getEstimatedTargetVideoFileSize(mediaSource, targetVideoFormat, targetAudioFormat);
         } catch (MediaSourceException ex) {
             return -1;
@@ -312,6 +329,7 @@ public class MediaTransformer {
      * Estimates target size of a target video based on track transformations. If no target audio format is specified,
      * uses 320 Kbps bitrate to estimate audio track size, if cannot extract audio bitrate. If track duration is not available,
      * maximum track duration will be used. If track bitrate cannot be extracted, track will not be used to estimate size.
+     *
      * @param trackTransforms track transforms
      */
     public long getEstimatedTargetVideoSize(@NonNull List<TrackTransform> trackTransforms) {
@@ -332,8 +350,8 @@ public class MediaTransformer {
         if (mimeType != null) {
             if (mimeType.startsWith("video")) {
                 targetMediaFormat = MediaFormat.createVideoFormat(mimeType,
-                                                                  sourceMediaFormat.getInteger(MediaFormat.KEY_WIDTH),
-                                                                  sourceMediaFormat.getInteger(MediaFormat.KEY_HEIGHT));
+                        sourceMediaFormat.getInteger(MediaFormat.KEY_WIDTH),
+                        sourceMediaFormat.getInteger(MediaFormat.KEY_HEIGHT));
                 int targetBitrate = TranscoderUtils.estimateVideoTrackBitrate(mediaSource, sourceTrackIndex);
                 targetMediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, targetBitrate);
 
@@ -344,8 +362,8 @@ public class MediaTransformer {
                 targetMediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, targetKeyFrameInterval);
             } else if (mimeType.startsWith("audio")) {
                 targetMediaFormat = MediaFormat.createAudioFormat(mimeType,
-                                                                  sourceMediaFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE),
-                                                                  sourceMediaFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT));
+                        sourceMediaFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE),
+                        sourceMediaFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT));
                 targetMediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, sourceMediaFormat.getInteger(MediaFormat.KEY_BIT_RATE));
             }
         }

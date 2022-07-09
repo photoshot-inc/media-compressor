@@ -1,11 +1,11 @@
 package videoeditor.compressor.video.features.compress
 
-import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
 import androidx.lifecycle.*
+import com.inspiration.imagepicker.domain.models.FileModel
 import devs.core.OneTimeEvent
 import devs.core.utils.safeRun
 import kotlinx.coroutines.Dispatchers
@@ -62,14 +62,15 @@ class CompressOptionViewModel(private val savedStateHandle: SavedStateHandle) : 
     }
 
     private fun initialize(savedStateHandle: SavedStateHandle) {
-        Log.d(TAG, "initialize: ${savedStateHandle.get<String>(IntentKeys.EXTRA_URI.str)}")
-        val uri = savedStateHandle.get<String>(IntentKeys.EXTRA_URI.str)!!
+        Log.d(TAG, "initialize: ${savedStateHandle.get<String>(IntentKeys.EXTRA_MODEL.str)}")
+        val uri = savedStateHandle.get<FileModel>(IntentKeys.EXTRA_MODEL.str)!!
         parseVideoInfo(uri)
     }
 
-    private fun parseVideoInfo(uri: String) {
+    private fun parseVideoInfo(selectedFile: FileModel) {
         val mediaMetadataRetriever = MediaMetadataRetriever()
-        val descriptor = appInfo.context.contentResolver.openFileDescriptor(Uri.parse(uri), "r")
+        val descriptor =
+            appInfo.context.contentResolver.openFileDescriptor(Uri.parse(selectedFile.uri), "r")
         mediaMetadataRetriever.setDataSource(descriptor!!.fileDescriptor)
         val width =
             mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
@@ -77,16 +78,25 @@ class CompressOptionViewModel(private val savedStateHandle: SavedStateHandle) : 
             mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
         val bitrate =
             mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)
+        Log.d(TAG, "parseVideoInfo: $bitrate")
         val title =
             mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+        val duration =
+            mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+        val rotation =
+            mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
         val info =
             VideoInfo(
-                title ?: "unknown",
-                uri,
-                width = width!!.toInt(),
-                height!!.toInt(),
-                bitrate = bitrate!!.toInt()
+                selectedFile.title,
+                selectedFile.uri,
+                width = width!!.toInt(), //if (false &&rotation != null && rotation.toInt() != 0) height!!.toInt() else
+                height = height!!.toInt(),
+                bitrate = (bitrate!!.toLong() * 0.125).toLong(),
+                duration!!.toLong(),
+                selectedFile.size
             )
+        mediaMetadataRetriever.release()
+        Log.d(TAG, "parseVideoInfo: $info")
         videoInfo.postValue(info)
         _selectedUris.postValue(listOf(info))
     }
@@ -99,11 +109,11 @@ class CompressOptionViewModel(private val savedStateHandle: SavedStateHandle) : 
         val processInfo =
             ProcessingInfo(
                 System.currentTimeMillis().toInt(),
-                videoInfo.value!!.uri,
                 width,
                 height,
                 bitrate,
-                outputPath
+                outputPath,
+                videoInfo.value!!
             )
         tracker.save(processInfo, onSuccess = {
             ActivityEvents.ShowProcessingScreenEvent.broadcast()

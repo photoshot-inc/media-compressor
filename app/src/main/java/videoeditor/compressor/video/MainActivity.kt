@@ -7,8 +7,6 @@ import com.inspiration.imagepicker.domain.models.FileModel
 import com.inspiration.imagepicker.presentation.fragments.FilePicker
 import com.inspiration.imagepicker.presentation.fragments.FilePickerCallback
 import devs.core.BaseActivity
-import devs.core.utils.addFragment
-import devs.core.utils.dismissWithAnimation
 import devs.core.utils.replaceFragment
 import devs.core.utils.withStoragePermission
 import org.greenrobot.eventbus.Subscribe
@@ -47,7 +45,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     }
 
     override fun onImageClicked(image: FileModel, requestCode: Int) {
-        showScreen(CompressOptionsFragment.newInstance(image.uri))
+        showScreen(CompressOptionsFragment.newInstance(image))
     }
 
     private fun showScreen(fragment: Fragment) {

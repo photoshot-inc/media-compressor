@@ -10,16 +10,23 @@ import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.devs.adloader.AdProvider.loadBannerAd
 import com.google.android.material.tabs.TabLayoutMediator
+import com.inspiration.imagepicker.domain.models.FileModel
 import devs.core.AbstractAdapter
 import devs.core.BaseObservableFragment
 import devs.core.utils.load
 import kotlinx.coroutines.*
 import videoeditor.compressor.video.R
+import videoeditor.compressor.video.Utils
+import videoeditor.compressor.video.Utils.readableSize
+import videoeditor.compressor.video.Utils.toFormattedDuration
 import videoeditor.compressor.video.databinding.FragmentCompressOptionsBinding
 import videoeditor.compressor.video.databinding.LayoutThumbImageBinding
+import videoeditor.compressor.video.events.ActivityEvents
+import videoeditor.compressor.video.events.broadcast
 import videoeditor.compressor.video.features.compress.custom.CustomResQualityFragment
 import videoeditor.compressor.video.features.compress.resolution.ConfigurationUpdateLister
 import videoeditor.compressor.video.features.compress.resolution.ResolutionSelectionFragment
+import videoeditor.compressor.video.models.VideoInfo
 
 interface CompressScreenCallbacks {
     fun startProcessing()
@@ -30,9 +37,9 @@ class CompressOptionsFragment :
         FragmentCompressOptionsBinding::inflate
     ), ConfigurationUpdateLister {
     companion object {
-        fun newInstance(uri: String): CompressOptionsFragment {
+        fun newInstance(model: FileModel): CompressOptionsFragment {
             val fragment = CompressOptionsFragment()
-            fragment.arguments = bundleOf(IntentKeys.EXTRA_URI.str to uri)
+            fragment.arguments = bundleOf(IntentKeys.EXTRA_MODEL.str to model)
             return fragment
         }
     }
@@ -40,17 +47,22 @@ class CompressOptionsFragment :
     private val viewModel by viewModels<CompressOptionViewModel>()
     private lateinit var adapter: FragmentStateAdapter
 
-    private lateinit var pagerAdapter: AbstractAdapter<String, LayoutThumbImageBinding>
+    private lateinit var pagerAdapter: AbstractAdapter<VideoInfo, LayoutThumbImageBinding>
 
     override fun initView() {
         pagerAdapter = object :
-            AbstractAdapter<String, LayoutThumbImageBinding>(LayoutThumbImageBinding::inflate) {
+            AbstractAdapter<VideoInfo, LayoutThumbImageBinding>(LayoutThumbImageBinding::inflate) {
             override fun bind(
                 itemBinding: LayoutThumbImageBinding,
-                item: String,
+                item: VideoInfo,
                 position: Int
             ) {
-                itemBinding.thumb.load(item)
+                itemBinding.thumb.load(item.uri)
+                itemBinding.size.text = item.size.readableSize()
+                itemBinding.duration.text = item.duration.toFormattedDuration()
+                itemBinding.playBtn.setOnClickListener {
+                    ActivityEvents.PlayVideoEvent(item.uri).broadcast()
+                }
             }
         }
         adapter = object : FragmentStateAdapter(this@CompressOptionsFragment) {
@@ -100,10 +112,11 @@ class CompressOptionsFragment :
 
     private fun initObservers() {
         viewModel.selectedFiles.observe(viewLifecycleOwner) { it ->
-            pagerAdapter.setItems(it.map { uri -> uri.uri })
+            pagerAdapter.setItems(it)
         }
         viewModel.videoInfo.observe(viewLifecycleOwner) {
             adapter.notifyDataSetChanged()
+            binding.toolbar.title = it?.title
         }
         viewModel.events.observe(viewLifecycleOwner) {
             if (it.hasBeenHandled) return@observe

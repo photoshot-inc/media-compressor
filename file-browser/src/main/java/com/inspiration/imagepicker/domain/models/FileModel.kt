@@ -1,3 +1,5 @@
 package com.inspiration.imagepicker.domain.models
 
-data class FileModel(val title:String, val uri:String, val path:String)
+import java.io.Serializable
+
+data class FileModel(val title: String, val uri: String, val path: String, val size: Long = 0):Serializable

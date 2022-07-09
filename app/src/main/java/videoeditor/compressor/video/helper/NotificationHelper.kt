@@ -8,12 +8,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import androidx.annotation.DrawableRes
+import videoeditor.compressor.video.R
 
 
 class AppNotification(
     private val context: Context,
-    @DrawableRes private val smallIcon: Int,
     private val id: Int,
     intent: Intent,
 ) :
@@ -22,7 +21,7 @@ class AppNotification(
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     val notification: Notification.Builder by lazy {
         Notification.Builder(context)
-            .setSmallIcon(smallIcon)
+            .setSmallIcon(R.drawable.notification_icon)
             .setContentText("Checking for processes")
             .setContentTitle("Video Compressor")
             .setSound(null, null)
@@ -40,12 +39,12 @@ class AppNotification(
     init {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                "downloader",
-                "Video Downloader notification",
+                "compressor",
+                "Compressor Status Notification",
                 NotificationManager.IMPORTANCE_LOW
             )
             notificationManager.createNotificationChannel(channel)
-            notification.setChannelId("downloader")
+            notification.setChannelId("compressor")
         }
     }
 
@@ -66,7 +65,7 @@ class AppNotification(
                 .setContentTitle(title)
                 .setOngoing(false)
                 .setProgress(0, 0, false)
-                .setContentText("Completed" + outputPath)
+                .setContentText(outputPath)
                 .build()
         )
     }
@@ -75,6 +74,10 @@ class AppNotification(
         notification.setOngoing(true)
         notification.setProgress(100, progress, false)
         notificationManager.notify(id, notification.build())
+    }
+
+    fun update(title: String, message: String) {
+        show(title, message)
     }
 
     override fun updateProgress(progress: Long, total: Long) {

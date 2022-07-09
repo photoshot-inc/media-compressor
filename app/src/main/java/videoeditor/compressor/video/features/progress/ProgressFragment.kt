@@ -10,11 +10,14 @@ import com.devs.adloader.AdProvider.loadNativeAd
 import devs.core.BaseObservableFragment
 import devs.core.utils.load
 import devs.core.utils.safeRun
+import videoeditor.compressor.video.Utils
+import videoeditor.compressor.video.Utils.readableSize
 import videoeditor.compressor.video.databinding.FragmentProgressBinding
 import videoeditor.compressor.video.events.ActivityEvents
 import videoeditor.compressor.video.events.broadcast
 import videoeditor.compressor.video.service.CompressionService
 import videoeditor.compressor.video.service.ServiceState
+import java.io.File
 
 class ProgressFragment : BaseObservableFragment<FragmentProgressBinding,
         ProgressFragment.Listener>(FragmentProgressBinding::inflate), ServiceConnection {
@@ -26,6 +29,9 @@ class ProgressFragment : BaseObservableFragment<FragmentProgressBinding,
     override fun initView() {
         context?.let { CompressionService.startService(it) }
         loadNativeAd(binding.adContainer)
+        binding.cancelBtn.setOnClickListener {
+            mService?.cancel()
+        }
     }
 
     override fun onStart() {
@@ -56,13 +62,22 @@ class ProgressFragment : BaseObservableFragment<FragmentProgressBinding,
         }
         service.state.observe(viewLifecycleOwner) { state ->
             binding.successView.isVisible = state is ServiceState.Success
-            binding.progressView.isVisible = state is ServiceState.Processing
+            binding.progressView.isVisible =
+                state is ServiceState.Processing || state is ServiceState.Started
             when (state) {
                 is ServiceState.Success -> {
                     binding.outputVideoThumb.load(state.data.outputPath)
                     binding.outputVideoThumb.setOnClickListener {
                         ActivityEvents.PlayVideoEvent(state.data.outputPath).broadcast()
                     }
+                    val outDimen = "${state.data.outputWidth}x${state.data.outputHeight}"
+                    val outSize =
+                        "${(File(state.data.outputPath).length()).readableSize()}"
+                    val inDimen =
+                        "${state.data.inputVideoInfo.width}x${state.data.inputVideoInfo.height}"
+                    val inSize = "${state.data.inputVideoInfo.size.readableSize()}"
+                    binding.inputSize.text = "$inDimen\n$inSize"
+                    binding.outputSize.text = "$outDimen\n$outSize"
                 }
                 else -> {}
             }
