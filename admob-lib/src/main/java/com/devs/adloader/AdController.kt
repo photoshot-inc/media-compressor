@@ -157,12 +157,16 @@ object AdProvider {
 
     @JvmStatic()
     fun Activity.loadBannerAd(viewGroup: ViewGroup) {
+        viewGroup.visibility = View.GONE
+        return
         resolveLifecycleOwner()?.let { AdController.instance.loadBannerAd(viewGroup, it) }
 
     }
 
     @JvmStatic()
     fun Fragment.loadNativeAd(viewGroup: ViewGroup): NativeAdLoader? {
+        viewGroup.visibility = View.GONE
+        return null
         return resolveLifecycleOwner()?.let {
             return@let AdController.instance.loadNativeAd(viewGroup, it)
         }
@@ -171,6 +175,8 @@ object AdProvider {
 
     @JvmStatic()
     fun Fragment.loadBannerAd(viewGroup: ViewGroup) {
+        viewGroup.visibility = View.GONE
+        return
         resolveLifecycleOwner()?.let { AdController.instance.loadBannerAd(viewGroup, it) }
 
     }
