@@ -1,4 +1,6 @@
-package com.inspiration.imagepicker.presentation.fragments
+package com.inspiration.imagepicker
+
+import com.inspiration.imagepicker.presentation.fragments.ImagePickerFragment
 
 object FilePicker {
     const val TYPE_IMAGE = 0

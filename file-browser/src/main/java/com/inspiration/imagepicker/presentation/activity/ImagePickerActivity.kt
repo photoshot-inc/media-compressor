@@ -1,4 +1,4 @@
-package com.inspiration.imagepicker
+package com.inspiration.imagepicker.presentation.activity
 
 import android.graphics.Typeface
 import android.os.Bundle

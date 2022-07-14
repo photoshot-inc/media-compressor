@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.inspiration.imagepicker.FilePicker
 import com.inspiration.imagepicker.R
 import com.inspiration.imagepicker.databinding.FragmentImagePickerBsBinding
 import com.inspiration.imagepicker.databinding.ItemBsImageGridBinding

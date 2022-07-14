@@ -5,7 +5,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.inspiration.imagepicker.domain.models.FileModel
-import com.inspiration.imagepicker.presentation.fragments.FilePicker
+import com.inspiration.imagepicker.FilePicker
 import com.inspiration.imagepicker.presentation.fragments.FilePickerCallback
 import devs.core.BaseActivity
 import devs.core.utils.replaceFragment
