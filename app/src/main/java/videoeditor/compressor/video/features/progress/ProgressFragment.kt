@@ -74,8 +74,13 @@ class ProgressFragment : BaseObservableFragment<FragmentProgressBinding,
             binding.progress.isIndeterminate = it < 0
             binding.progress.progress = it
         }
+        binding.exitOnErrorBtn.setOnClickListener {
+            activity?.onBackPressedDispatcher?.onBackPressed()
+        }
         service.state.observe(viewLifecycleOwner) { state ->
             binding.successView.isVisible = state is ServiceState.Success
+            binding.errorView.isVisible =
+                state is ServiceState.Cancelled || state is ServiceState.Failed
             binding.progressView.isVisible =
                 state is ServiceState.Processing || state is ServiceState.Started
             when (state) {
@@ -93,6 +98,13 @@ class ProgressFragment : BaseObservableFragment<FragmentProgressBinding,
                     val inSize = "${state.data.inputVideoInfo.size.readableSize()}"
                     binding.inputSize.text = "$inDimen\n$inSize"
                     binding.outputSize.text = "$outDimen\n$outSize"
+                }
+                is ServiceState.Cancelled -> {
+                    binding.erroMessage.text = "Cancelled by user"
+                }
+
+                is ServiceState.Failed -> {
+                    binding.erroMessage.text = "Compression Failed"
                 }
                 else -> {}
             }
